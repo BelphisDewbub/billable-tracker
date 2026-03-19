@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a73e8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Billable">
+<meta name="description" content="Consulting utilization & billable hours tracker">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Billable Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── MD3 TOKENS ── */
+:root {
+  --md-bg:         #f4f6f8;
+  --md-surface:    #ffffff;
+  --md-surface2:   #f0f4ff;
+  --md-outline:    #e0e2ec;
+  --md-outline-variant: #c7c9d5;
+
+  --md-primary:    #1a73e8;
+  --md-primary-bg: #e8f0fe;
+  --md-on-primary: #ffffff;
+
+  --md-green:      #1e8e3e;
+  --md-green-bg:   #e6f4ea;
+  --md-amber:      #b06000;
+  --md-amber-bg:   #fef7e0;
+  --md-red:        #c5221f;
+  --md-red-bg:     #fce8e6;
+  --md-gray:       #5f6368;
+  --md-gray-bg:    #f1f3f4;
+
+  --md-text:       #202124;
+  --md-text-secondary: #5f6368;
+  --md-text-tertiary:  #80868b;
+
+  --font-display: 'Google Sans Display', 'Google Sans', sans-serif;
+  --font-body:    'Roboto', sans-serif;
+  --font-ui:      'Google Sans', 'Roboto', sans-serif;
+
+  --r:    8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-2: 0 2px 6px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* ── BASE ── */
+body {
+  background: var(--md-bg);
+  color: var(--md-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ── LAYOUT ── */
+.app { max-width: 1100px; margin: 0 auto; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-left h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--md-text);
+  letter-spacing: 0;
+}
+.header-left h1 span { color: var(--md-primary); font-weight: 500; }
+.header-left .subtitle {
+  color: var(--md-text-secondary);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline);
+  border-radius: 20px;
+  padding: 6px 16px;
+  box-shadow: var(--shadow-1);
+}
+.year-selector label { color: var(--md-text-secondary); font-size: 0.8rem; }
+.year-selector select {
+  background: transparent;
+  border: none;
+  color: var(--md-text);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ── KPI STRIP ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kpi {
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--r-xl);
+  padding: 20px;
+  box-shadow: var(--shadow-1);
+  transition: box-shadow 0.2s;
+}
+.kpi:hover { box-shadow: var(--shadow-2); }
+
+.kpi-label {
+  color: var(--md-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--md-text);
+  line-height: 1.1;
+}
+.kpi-sub { color: var(--md-text-tertiary); font-size: 0.75rem; margin-top: 4px; }
+
+/* ── MAIN GRID ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--md-outline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--md-text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.panel-body { padding: 20px; }
+
+/* ── MONTH TABLE ── */
+.month-table { width: 100%; border-collapse: collapse; }
+.month-table th {
+  color: var(--md-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 0 12px 10px;
+  white-space: nowrap;
+}
+.month-table th:last-child { text-align: right; }
+.month-table td {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  border-top: 1px solid var(--md-outline);
+  vertical-align: middle;
+  color: var(--md-text);
+}
+
+.month-row { cursor: pointer; transition: background 0.12s; }
+.month-row:hover { background: #f8f9fa; }
+.month-row.active { background: var(--md-primary-bg); }
+.month-row td:first-child {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.util-bar-wrap { width: 90px; }
+.util-bar {
+  height: 4px;
+  background: var(--md-outline);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.util-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 72px;
+}
+.badge-green  { background: var(--md-green-bg);   color: var(--md-green); }
+.badge-red    { background: var(--md-red-bg);     color: var(--md-red); }
+.badge-yellow { background: var(--md-amber-bg);   color: var(--md-amber); }
+.badge-gray   { background: var(--md-gray-bg);    color: var(--md-gray); }
+
+.pto-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--md-amber);
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+
+/* ── RIGHT COL ── */
+.right-col { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  color: var(--md-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.form-group select,
+.form-group input {
+  width: 100%;
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--r);
+  color: var(--md-text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-group select:focus,
+.form-group input:focus {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 2px rgba(26,115,232,0.12);
+}
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+.btn:hover { box-shadow: var(--shadow-2); }
+.btn:active { box-shadow: none; }
+.btn-primary { background: var(--md-primary); color: var(--md-on-primary); }
+.btn-primary:hover { background: #1666d0; }
+.btn-secondary { background: var(--md-surface); color: var(--md-primary); border: 1px solid var(--md-outline); }
+.btn-danger { background: var(--md-red-bg); color: var(--md-red); border: 1px solid #f5c6c5; }
+
+/* ── GOAL SLIDER ── */
+.slider-wrap { display: flex; align-items: center; gap: 12px; }
+.slider-wrap input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  background: var(--md-outline);
+  height: 4px;
+  border-radius: 99px;
+  outline: none;
+  cursor: pointer;
+}
+.slider-wrap input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  background: var(--md-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.slider-val {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--md-primary);
+  font-size: 0.9rem;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── DETAIL MODAL ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--md-surface);
+  border-radius: var(--r-xl);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  transform: translateY(8px) scale(0.98);
+  transition: transform 0.2s;
+}
+.modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+.modal-head {
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--md-outline);
+}
+.modal-head h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--md-text);
+}
+.modal-close {
+  background: none; border: none;
+  color: var(--md-text-secondary);
+  cursor: pointer; font-size: 1.1rem; line-height: 1;
+  border-radius: 50%; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.modal-close:hover { background: var(--md-gray-bg); }
+.modal-body { padding: 16px 24px 24px; }
+
+.entry-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.entry-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafafa;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--r);
+  padding: 10px 14px;
+}
+.entry-item-left { display: flex; flex-direction: column; gap: 2px; }
+.entry-item-desc { color: var(--md-text); font-weight: 500; font-size: 0.85rem; }
+.entry-item-date { color: var(--md-text-tertiary); font-size: 0.75rem; }
+.entry-item-right { display: flex; align-items: center; gap: 10px; }
+.entry-hours { font-family: var(--font-ui); font-weight: 500; color: var(--md-primary); font-size: 0.9rem; }
+.entry-del {
+  background: none; border: none; color: var(--md-red); cursor: pointer;
+  font-size: 0.75rem; opacity: 0.5; transition: opacity 0.15s;
+  border-radius: 50%; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.entry-del:hover { opacity: 1; background: var(--md-red-bg); }
+
+/* ── HELPER TEXT ── */
+.tip {
+  font-size: 0.75rem;
+  color: var(--md-text-tertiary);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 800px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 460px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.kpi { animation: fadeUp 0.3s ease both; }
+.kpi:nth-child(2) { animation-delay: 0.04s; }
+.kpi:nth-child(3) { animation-delay: 0.08s; }
+.kpi:nth-child(4) { animation-delay: 0.12s; }
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--md-text-tertiary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Billable<span>.</span>Track</h1>
+      <p class="subtitle">Consulting Utilization Dashboard</p>
+    </div>
+    <div class="year-selector">
+      <label>Year</label>
+      <select id="yearSelect"></select>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-accent: var(--accent)">
+      <div class="kpi-label">YTD Utilization</div>
+      <div class="kpi-value" id="kpiUtil">—%</div>
+      <div class="kpi-sub" id="kpiUtilSub">vs 80% target</div>
+    </div>
+    <div class="kpi" style="--kpi-accent: var(--accent3)">
+      <div class="kpi-label">Billable Hours (YTD)</div>
+      <div class="kpi-value" id="kpiBillable">0h</div>
+      <div class="kpi-sub" id="kpiBillableSub">of <span id="kpiTarget">—</span>h target</div>
+    </div>
+    <div class="kpi" style="--kpi-accent: #a78bfa)">
+      <div class="kpi-label">PTO Days Used</div>
+      <div class="kpi-value" id="kpiPTO" style="color:#a78bfa">0</div>
+      <div class="kpi-sub" id="kpiPTOSub">of 0 allocated</div>
+    </div>
+    <div class="kpi" style="--kpi-accent: var(--accent2)">
+      <div class="kpi-label">Hours Behind / Ahead</div>
+      <div class="kpi-value" id="kpiDelta">—</div>
+      <div class="kpi-sub" id="kpiDeltaSub">to hit goal</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-grid">
+
+    <!-- LEFT: Month table -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Monthly Breakdown</span>
+          <span class="tip" style="margin:0">Click a month to view/edit entries</span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <table class="month-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Billable hrs</th>
+                <th>Work days</th>
+                <th>PTO days</th>
+                <th style="text-align:center">Utilization</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="monthTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+
+      <!-- Goal settings -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Goal Settings</span></div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>Start Date <span style="color:var(--accent3);font-size:0.6rem">— days before this are excluded</span></label>
+            <input type="date" id="startDate" placeholder="yyyy-mm-dd">
+          </div>
+          <div class="form-group">
+            <label>Utilization Target</label>
+            <div class="slider-wrap">
+              <input type="range" id="goalSlider" min="50" max="100" value="80" step="5">
+              <span class="slider-val" id="goalVal">80%</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>PTO Days Allocated</label>
+            <input type="number" id="ptoBudget" value="15" min="0" max="60" placeholder="15">
+          </div>
+          <div class="tip">Work week = 40 hrs. Hours per day = 8. Adjustments are saved automatically.</div>
+        </div>
+      </div>
+
+      <!-- Add hours -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Log Billable Hours</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Month</label>
+              <select id="logMonth"></select>
+            </div>
+            <div class="form-group">
+              <label>Year</label>
+              <select id="logYear"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" id="logHours" min="0.5" max="300" step="0.5" placeholder="e.g. 32">
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <input type="text" id="logDesc" placeholder="Project / client name">
+          </div>
+          <button class="btn btn-primary" onclick="addEntry()">+ Log Hours</button>
+        </div>
+      </div>
+
+      <!-- Log PTO -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Log PTO</span></div>
+        <div class="panel-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Month</label>
+              <select id="ptoMonth"></select>
+            </div>
+            <div class="form-group">
+              <label>Days</label>
+              <input type="number" id-"ptoDays" id="ptoDays" min="0.5" max="30" step="0.5" placeholder="e.g. 3">
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="addPTO()">+ Log PTO</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MONTH DETAIL MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">January Entries</h3>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body">
+      <ul class="entry-list" id="entryList"></ul>
+      <div id="entryEmpty" class="empty-state" style="display:none">No entries yet for this month.<br>Log hours using the form.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA LAYER ──
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const STORAGE_KEY = 'billableTracker_v2';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { goal: 80, ptoBudget: 15, startDate: null, entries: {}, pto: {} };
+}
+
+function saveState(s) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+}
+
+let state = loadState();
+let activeModal = null; // { year, monthIdx }
+
+// ── HELPERS ──
+function workDaysInMonth(year, monthIdx, fromDate) {
+  // Count Mon-Fri in the month, optionally starting from fromDate
+  const start = fromDate
+    ? new Date(Math.max(new Date(year, monthIdx, 1), fromDate))
+    : new Date(year, monthIdx, 1);
+  const d = new Date(start);
+  let count = 0;
+  while (d.getMonth() === monthIdx) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+// Returns parsed start date or null
+function getStartDate() {
+  if (!state.startDate) return null;
+  const d = new Date(state.startDate + 'T00:00:00');
+  return isNaN(d) ? null : d;
+}
+
+// Is this month entirely before the start date?
+function monthBeforeStart(year, monthIdx) {
+  const sd = getStartDate();
+  if (!sd) return false;
+  // month is before start if the last day of the month < startDate
+  const lastDay = new Date(year, monthIdx + 1, 0);
+  return lastDay < sd;
+}
+
+function getKey(year, monthIdx) { return `${year}_${monthIdx}`; }
+
+function getBillableHours(year, monthIdx) {
+  const k = getKey(year, monthIdx);
+  return (state.entries[k] || []).reduce((s, e) => s + e.hours, 0);
+}
+
+function getPTODays(year, monthIdx) {
+  const k = getKey(year, monthIdx);
+  return state.pto[k] || 0;
+}
+
+function getUtilization(year, monthIdx) {
+  if (monthBeforeStart(year, monthIdx)) return null;
+  const sd = getStartDate();
+  const now = new Date();
+  const isCur = isMonthCurrent(year, monthIdx);
+
+  let workDays;
+  if (isCur) {
+    // MTD: denominator = weekdays elapsed through today
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    workDays = workDaysUpTo(year, monthIdx, today, sd);
+  } else {
+    workDays = workDaysInMonth(year, monthIdx, sd);
+  }
+
+  const pto = getPTODays(year, monthIdx);
+  // Prorate PTO for current month so partial weeks don't over-penalise
+  let effectivePTO = pto;
+  if (isCur) {
+    const totalWD = workDaysInMonth(year, monthIdx, sd);
+    effectivePTO = totalWD > 0 ? workDays * (pto / totalWD) : 0;
+  }
+
+  const availHours = Math.max(0, workDays - effectivePTO) * 8;
+  if (availHours === 0) return null;
+  return (getBillableHours(year, monthIdx) / availHours) * 100;
+}
+
+function isMonthInPast(year, monthIdx) {
+  const now = new Date();
+  return year < now.getFullYear() || (year === now.getFullYear() && monthIdx < now.getMonth());
+}
+function isMonthCurrent(year, monthIdx) {
+  const now = new Date();
+  return year === now.getFullYear() && monthIdx === now.getMonth();
+}
+
+function getSelectedYear() {
+  return parseInt(document.getElementById('yearSelect').value);
+}
+
+// ── INIT SELECTS ──
+function initSelects() {
+  const ySel = document.getElementById('yearSelect');
+  const logY = document.getElementById('logYear');
+  const now = new Date();
+  const curYear = now.getFullYear();
+  [-1, 0, 1].forEach(offset => {
+    const y = curYear + offset;
+    [ySel, logY].forEach(sel => {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      if (y === curYear) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  ['logMonth','ptoMonth'].forEach(id => {
+    const sel = document.getElementById(id);
+    MONTHS.forEach((m, i) => {
+      const opt = document.createElement('option');
+      opt.value = i; opt.textContent = m;
+      if (i === now.getMonth()) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  document.getElementById('yearSelect').addEventListener('change', render);
+}
+
+// ── RENDER ──
+function render() {
+  const year = getSelectedYear();
+  renderKPIs(year);
+  renderTable(year);
+  syncGoalUI();
+}
+
+// Count Mon-Fri days from the effective start of a month up to and including a cutoff date
+function workDaysUpTo(year, monthIdx, cutoff, fromDate) {
+  const start = fromDate
+    ? new Date(Math.max(new Date(year, monthIdx, 1), fromDate))
+    : new Date(year, monthIdx, 1);
+  const end = new Date(Math.min(cutoff, new Date(year, monthIdx + 1, 0)));
+  const d = new Date(start);
+  let count = 0;
+  while (d <= end) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function renderKPIs(year) {
+  const goal = state.goal;
+  const now = new Date();
+  // Treat "today" as end-of-day so a weekday today counts
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  let totalBillable = 0, totalAvailHours = 0, totalPTO = 0;
+  let paceAvailHours = 0; // prorated to today for the delta calc
+  const sd = getStartDate();
+
+  const currentMonth = (year === now.getFullYear()) ? now.getMonth() : (year < now.getFullYear() ? 11 : -1);
+
+  for (let m = 0; m <= currentMonth; m++) {
+    if (monthBeforeStart(year, m)) continue;
+    const wd = workDaysInMonth(year, m, sd);
+    const pto = getPTODays(year, m);
+    totalPTO += pto;
+    const fullAvail = Math.max(0, wd - pto) * 8;
+    totalAvailHours += fullAvail;
+    totalBillable += getBillableHours(year, m);
+
+    // For pace: past months use full days; current month prorates to today
+    if (year === now.getFullYear() && m === now.getMonth()) {
+      const wdToday = workDaysUpTo(year, m, today, sd);
+      const ptoFraction = wd > 0 ? (pto / wd) : 0; // spread PTO evenly across the month
+      const paceAvail = Math.max(0, wdToday - pto * ptoFraction) * 8;
+      paceAvailHours += paceAvail;
+    } else {
+      paceAvailHours += fullAvail;
+    }
+  }
+
+  const util = totalAvailHours > 0 ? (totalBillable / totalAvailHours * 100) : 0;
+  const targetHours = totalAvailHours * (goal / 100);
+  const paceTargetHours = paceAvailHours * (goal / 100); // what you should have billed *by today*
+  const delta = totalBillable - paceTargetHours;
+
+  // KPI 1: YTD util
+  document.getElementById('kpiUtil').textContent = currentMonth >= 0 ? `${util.toFixed(1)}%` : '—';
+  document.getElementById('kpiUtil').style.color = util >= goal ? 'var(--md-green)' : util >= goal * 0.9 ? 'var(--md-amber)' : 'var(--md-red)';
+
+  // KPI 2: billable
+  document.getElementById('kpiBillable').textContent = `${totalBillable.toFixed(1)}h`;
+  document.getElementById('kpiTarget').textContent = targetHours.toFixed(0);
+
+  // KPI 3: PTO
+  document.getElementById('kpiPTO').textContent = totalPTO.toFixed(1);
+  document.getElementById('kpiPTOSub').textContent = `of ${state.ptoBudget} allocated`;
+
+  // KPI 4: delta
+  const sign = delta >= 0 ? '+' : '';
+  document.getElementById('kpiDelta').textContent = currentMonth >= 0 ? `${sign}${delta.toFixed(1)}h` : '—';
+  document.getElementById('kpiDelta').style.color = delta >= 0 ? 'var(--md-green)' : 'var(--md-red)';
+  document.getElementById('kpiDeltaSub').textContent = delta >= 0 ? 'ahead of pace today' : 'behind pace today';
+}
+
+function renderTable(year) {
+  const tbody = document.getElementById('monthTbody');
+  const goal = state.goal;
+  const now = new Date();
+  const sd = getStartDate();
+  tbody.innerHTML = '';
+
+  MONTHS.forEach((month, i) => {
+    const isPast = isMonthInPast(year, i);
+    const isCurrent = isMonthCurrent(year, i);
+    const isFuture = !isPast && !isCurrent;
+    const isExcluded = monthBeforeStart(year, i);
+
+    const workDays = workDaysInMonth(year, i, sd);
+    const totalWorkDays = workDaysInMonth(year, i); // un-clipped, for display
+    const pto = getPTODays(year, i);
+    const billable = getBillableHours(year, i);
+    const util = getUtilization(year, i);
+
+    let utilColor, badgeClass, badgeText;
+    if (isExcluded) {
+      utilColor = 'var(--md-gray)';
+      badgeClass = 'badge-gray';
+      badgeText = 'Before Start';
+    } else if (isFuture) {
+      utilColor = 'var(--md-gray)';
+      badgeClass = 'badge-gray';
+      badgeText = 'Upcoming';
+    } else if (util === null) {
+      utilColor = 'var(--md-gray)';
+      badgeClass = 'badge-gray';
+      badgeText = 'N/A';
+    } else if (util >= goal) {
+      utilColor = 'var(--md-green)';
+      badgeClass = 'badge-green';
+      badgeText = '✓ On Track';
+    } else if (util >= goal * 0.85) {
+      utilColor = 'var(--md-amber)';
+      badgeClass = 'badge-yellow';
+      badgeText = '~ Close';
+    } else {
+      utilColor = 'var(--md-red)';
+      badgeClass = 'badge-red';
+      badgeText = '✗ Below';
+    }
+
+    const fillPct = util !== null ? Math.min(100, util) : 0;
+    const ptoStr = pto > 0 ? `<span class="pto-dot"></span>${pto}d` : `—`;
+
+    // For partial start month, show "Xd (of Yd)" in the work days column
+    const isPartialStart = sd && !isExcluded && sd.getMonth() === i && sd.getFullYear() === year && sd.getDate() > 1;
+    const workDaysDisplay = isPartialStart
+      ? `<span style="color:var(--md-amber)">${workDays}d</span><span style="color:var(--md-text-tertiary);font-size:0.72rem"> of ${totalWorkDays}d</span>`
+      : `${workDays}d`;
+
+    const tr = document.createElement('tr');
+    tr.className = 'month-row' + (isCurrent ? ' active' : '') + (isExcluded ? ' excluded' : '');
+    tr.style.opacity = isExcluded ? '0.45' : '1';
+    tr.innerHTML = `
+      <td>${month}${isCurrent ? ' <span style="color:var(--md-primary);font-size:0.6rem">●</span>' : ''}${isPartialStart ? ' <span style="color:var(--md-amber);font-size:0.6rem">◑</span>' : ''}</td>
+      <td style="font-weight:500;color:${isFuture||isExcluded?'var(--md-text-tertiary)':'var(--md-text)'}">${isFuture||isExcluded ? '—' : billable.toFixed(1) + 'h'}</td>
+      <td style="color:var(--md-text-secondary)">${workDaysDisplay}</td>
+      <td style="color:var(--md-amber)">${ptoStr}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="util-bar-wrap">
+            <div class="util-bar">
+              <div class="util-bar-fill" style="width:${fillPct}%;background:${utilColor}"></div>
+            </div>
+          </div>
+          <span style="color:${utilColor};font-family:var(--font-ui);font-size:0.82rem;font-weight:500;min-width:42px">
+            ${util !== null && !isFuture && !isExcluded ? util.toFixed(1)+'%' : '—'}${isCurrent && util !== null ? '<span style="font-size:0.65rem;color:var(--md-text-tertiary);font-weight:400;margin-left:3px">MTD</span>' : ''}
+          </span>
+        </div>
+      </td>
+      <td style="text-align:right"><span class="badge ${badgeClass}">${badgeText}</span></td>
+    `;
+    tr.addEventListener('click', () => { if (!isExcluded) openModal(year, i); });
+    tbody.appendChild(tr);
+  });
+}
+
+function syncGoalUI() {
+  document.getElementById('goalSlider').value = state.goal;
+  document.getElementById('goalVal').textContent = state.goal + '%';
+  document.getElementById('ptoBudget').value = state.ptoBudget;
+  document.getElementById('startDate').value = state.startDate || '';
+}
+
+// ── ACTIONS ──
+function addEntry() {
+  const month = parseInt(document.getElementById('logMonth').value);
+  const year  = parseInt(document.getElementById('logYear').value);
+  const hours = parseFloat(document.getElementById('logHours').value);
+  const desc  = document.getElementById('logDesc').value.trim() || 'Billable work';
+
+  if (!hours || hours <= 0) { alert('Please enter a valid number of hours.'); return; }
+
+  const k = getKey(year, month);
+  if (!state.entries[k]) state.entries[k] = [];
+  state.entries[k].push({ id: Date.now(), hours, desc, date: new Date().toLocaleDateString() });
+  saveState(state);
+
+  document.getElementById('logHours').value = '';
+  document.getElementById('logDesc').value = '';
+
+  render();
+  if (activeModal && activeModal.year === year && activeModal.monthIdx === month) {
+    renderModalEntries(year, month);
+  }
+}
+
+function addPTO() {
+  const month = parseInt(document.getElementById('ptoMonth').value);
+  const year  = getSelectedYear();
+  const days  = parseFloat(document.getElementById('ptoDays').value);
+  if (!days || days <= 0) { alert('Please enter valid PTO days.'); return; }
+
+  const k = getKey(year, month);
+  state.pto[k] = (state.pto[k] || 0) + days;
+  saveState(state);
+
+  document.getElementById('ptoDays').value = '';
+  render();
+}
+
+function deleteEntry(year, monthIdx, id) {
+  const k = getKey(year, monthIdx);
+  state.entries[k] = (state.entries[k] || []).filter(e => e.id !== id);
+  saveState(state);
+  render();
+  renderModalEntries(year, monthIdx);
+}
+
+// ── MODAL ──
+function openModal(year, monthIdx) {
+  activeModal = { year, monthIdx };
+  document.getElementById('modalTitle').textContent = `${MONTHS[monthIdx]} ${year} — Entries`;
+  renderModalEntries(year, monthIdx);
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+
+function renderModalEntries(year, monthIdx) {
+  const k = getKey(year, monthIdx);
+  const entries = state.entries[k] || [];
+  const list = document.getElementById('entryList');
+  const empty = document.getElementById('entryEmpty');
+
+  list.innerHTML = '';
+  if (entries.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Summary row
+  const total = entries.reduce((s,e) => s+e.hours, 0);
+  const sumLi = document.createElement('li');
+  sumLi.style.cssText = 'display:flex;justify-content:space-between;padding:8px 14px;background:var(--md-primary-bg);border-radius:8px;border:1px solid #c5d8fb;margin-bottom:4px;font-size:0.8rem;color:var(--md-text-secondary)';
+  sumLi.innerHTML = `<span>${entries.length} entr${entries.length>1?'ies':'y'}</span><span style="color:var(--md-primary);font-family:var(--font-ui);font-weight:500">${total.toFixed(1)}h total</span>`;
+  list.appendChild(sumLi);
+
+  entries.slice().reverse().forEach(e => {
+    const li = document.createElement('li');
+    li.className = 'entry-item';
+    li.innerHTML = `
+      <div class="entry-item-left">
+        <span class="entry-item-desc">${e.desc}</span>
+        <span class="entry-item-date">${e.date}</span>
+      </div>
+      <div class="entry-item-right">
+        <span class="entry-hours">${e.hours}h</span>
+        <button class="entry-del" onclick="deleteEntry(${year},${monthIdx},${e.id})">✕</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function closeModal(event) {
+  if (event.target === document.getElementById('modalBackdrop')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  activeModal = null;
+}
+
+// ── GOAL LISTENERS ──
+document.getElementById('goalSlider').addEventListener('input', function() {
+  state.goal = parseInt(this.value);
+  document.getElementById('goalVal').textContent = this.value + '%';
+  saveState(state);
+  render();
+});
+
+document.getElementById('ptoBudget').addEventListener('change', function() {
+  state.ptoBudget = parseInt(this.value) || 0;
+  saveState(state);
+  render();
+});
+
+document.getElementById('startDate').addEventListener('change', function() {
+  state.startDate = this.value || null;
+  saveState(state);
+  render();
+});
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModalDirect();
+});
+
+// ── BOOT ──
+initSelects();
+render();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
