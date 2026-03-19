@@ -2,10 +2,10 @@ const CACHE_NAME = 'billable-tracker-v1';
 
 // Everything the app needs to work offline
 const PRECACHE_URLS = [
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@400;500&display=swap'
 ];
 
