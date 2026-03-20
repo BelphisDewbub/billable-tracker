@@ -414,13 +414,62 @@ body {
 }
 
 /* ── RESPONSIVE ── */
+
+/* Tablet */
 @media (max-width: 800px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  body { padding: 16px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .main-grid { grid-template-columns: 1fr; }
+  .kpi-value { font-size: 1.5rem; }
+
+  /* Hide less-critical table columns on tablet */
+  .col-workdays, .col-pto { display: none; }
 }
-@media (max-width: 460px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .form-row { grid-template-columns: 1fr; }
+
+/* Mobile */
+@media (max-width: 540px) {
+  body { padding: 12px; font-size: 13px; }
+
+  .header { margin-bottom: 16px; gap: 10px; }
+  .header-left h1 { font-size: 1.2rem; }
+  .header-left .subtitle { font-size: 0.72rem; }
+  .year-selector { padding: 5px 12px; }
+
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .kpi { padding: 14px; }
+  .kpi-label { font-size: 0.68rem; margin-bottom: 4px; }
+  .kpi-value { font-size: 1.35rem; }
+  .kpi-sub { font-size: 0.68rem; }
+
+  .main-grid { gap: 10px; }
+
+  /* Table: show only Month, Billable, Util, Status */
+  .col-workdays, .col-pto, .col-utilbar { display: none; }
+  .month-table th, .month-table td { padding: 10px 8px; }
+  .month-row td:first-child { font-size: 0.82rem; }
+
+  /* Util % value shown under badge in status column on mobile */
+  .util-pct-mobile { display: block; }
+
+  .panel-header { padding: 12px 16px; }
+  .panel-body { padding: 16px; }
+  .panel-title { font-size: 0.75rem; }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group select,
+  .form-group input {
+    font-size: 1rem;        /* prevents iOS zoom on focus */
+    padding: 11px 12px;
+    min-height: 44px;       /* touch target */
+  }
+  .form-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .btn { padding: 13px 16px; font-size: 0.95rem; min-height: 44px; }
+
+  .modal { width: 100%; max-width: 100%; border-radius: var(--r-xl) var(--r-xl) 0 0; align-self: flex-end; max-height: 85vh; }
+  .modal-backdrop { align-items: flex-end; }
+  .modal-head { padding: 16px 20px 12px; }
+  .modal-body { padding: 12px 20px 32px; }
 }
 
 /* ── ANIMATIONS ── */
@@ -437,6 +486,8 @@ body {
   font-size: 0.85rem;
   line-height: 1.6;
 }
+.util-pct-mobile { display: none; }
+
 </style>
 </head>
 <body>
@@ -495,9 +546,9 @@ body {
               <tr>
                 <th>Month</th>
                 <th>Billable hrs</th>
-                <th>Work days</th>
-                <th>PTO days</th>
-                <th style="text-align:center">Utilization</th>
+                <th class="col-workdays">Work days</th>
+                <th class="col-pto">PTO days</th>
+                <th class="col-utilbar" style="text-align:center">Utilization</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -866,12 +917,16 @@ function renderTable(year) {
     const tr = document.createElement('tr');
     tr.className = 'month-row' + (isCurrent ? ' active' : '') + (isExcluded ? ' excluded' : '');
     tr.style.opacity = isExcluded ? '0.45' : '1';
+    const utilLabel = util !== null && !isFuture && !isExcluded
+      ? `${util.toFixed(1)}%${isCurrent ? '<span style="font-size:0.6rem;color:var(--md-text-tertiary);font-weight:400;margin-left:2px">MTD</span>' : ''}`
+      : '—';
+
     tr.innerHTML = `
       <td>${month}${isCurrent ? ' <span style="color:var(--md-primary);font-size:0.6rem">●</span>' : ''}${isPartialStart ? ' <span style="color:var(--md-amber);font-size:0.6rem">◑</span>' : ''}</td>
       <td style="font-weight:500;color:${isFuture||isExcluded?'var(--md-text-tertiary)':'var(--md-text)'}">${isFuture||isExcluded ? '—' : billable.toFixed(1) + 'h'}</td>
-      <td style="color:var(--md-text-secondary)">${workDaysDisplay}</td>
-      <td style="color:var(--md-amber)">${ptoStr}</td>
-      <td>
+      <td class="col-workdays" style="color:var(--md-text-secondary)">${workDaysDisplay}</td>
+      <td class="col-pto" style="color:var(--md-amber)">${ptoStr}</td>
+      <td class="col-utilbar">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="util-bar-wrap">
             <div class="util-bar">
@@ -879,11 +934,14 @@ function renderTable(year) {
             </div>
           </div>
           <span style="color:${utilColor};font-family:var(--font-ui);font-size:0.82rem;font-weight:500;min-width:42px">
-            ${util !== null && !isFuture && !isExcluded ? util.toFixed(1)+'%' : '—'}${isCurrent && util !== null ? '<span style="font-size:0.65rem;color:var(--md-text-tertiary);font-weight:400;margin-left:3px">MTD</span>' : ''}
+            ${utilLabel}
           </span>
         </div>
       </td>
-      <td style="text-align:right"><span class="badge ${badgeClass}">${badgeText}</span></td>
+      <td style="text-align:right">
+        <span class="badge ${badgeClass}">${badgeText}</span>
+        <div style="color:${utilColor};font-size:0.72rem;font-weight:500;margin-top:2px" class="util-pct-mobile" style="display:none">${utilLabel}</div>
+      </td>
     `;
     tr.addEventListener('click', () => { if (!isExcluded) openModal(year, i); });
     tbody.appendChild(tr);
