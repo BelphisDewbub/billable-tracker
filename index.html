@@ -691,11 +691,16 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const STORAGE_KEY = 'billableTracker_v2';
 
 function loadState() {
+  const defaults = { goal: 80, ptoBudget: 15, holidayBudget: 10, startDate: null, entries: {}, pto: {} };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // Merge: fill in any fields that didn't exist in older versions
+      return Object.assign({}, defaults, saved);
+    }
   } catch(e) {}
-  return { goal: 80, ptoBudget: 15, holidayBudget: 10, startDate: null, entries: {}, pto: {} };
+  return defaults;
 }
 
 function saveState(s) {
@@ -788,27 +793,16 @@ function getUtilization(year, monthIdx) {
   const now = new Date();
   const isCur = isMonthCurrent(year, monthIdx);
 
-  const totalWD = workDaysInMonth(year, monthIdx, sd);
+  // Denominator = raw workdays (PTO/holidays are non-billable time, not excused days)
   let workDays;
   if (isCur) {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     workDays = workDaysUpTo(year, monthIdx, today, sd);
   } else {
-    workDays = totalWD;
+    workDays = workDaysInMonth(year, monthIdx, sd);
   }
 
-  // Use budgeted PTO (prorated annually) + holidays for the denominator
-  const ptoBudgeted = getPTOForMonth(year, monthIdx);
-  const holidays = getHolidaysForMonth(year, monthIdx);
-  const totalNonBillable = ptoBudgeted + holidays;
-
-  // Prorate for current month (MTD)
-  let effectiveNonBillable = totalNonBillable;
-  if (isCur) {
-    effectiveNonBillable = totalWD > 0 ? workDays * (totalNonBillable / totalWD) : 0;
-  }
-
-  const availHours = Math.max(0, workDays - effectiveNonBillable) * 8;
+  const availHours = workDays * 8;
   if (availHours === 0) return null;
   return (getBillableHours(year, monthIdx) / availHours) * 100;
 }
@@ -846,12 +840,15 @@ function renderAnnualSummary() {
   const nonBillableDays = pto + holidays;
   const availableDays = Math.max(0, totalDays - nonBillableDays);
   const availableHours = availableDays * 8;
-  const requiredHours = availableHours * goal;
-  const requiredDays = availableDays * goal;
-  const offDays = nonBillableDays;
 
-  // Anticipated util = all available days billed against total workdays (inc. PTO/holidays)
-  // i.e. if you bill every non-PTO, non-holiday weekday, what % of total workdays is that?
+  // Utilization = billable / total workdays (PTO/holidays count against you)
+  // So "required hours to hit X%" means: need X% of ALL workdays billed
+  // but you can only bill non-PTO/holiday days, so required = goal% * totalDays
+  // capped at availableDays (can't bill more than available)
+  const requiredDays = Math.min(totalDays * goal, availableDays);
+  const requiredHours = requiredDays * 8;
+
+  // Max util = if every available (non-PTO, non-holiday) day is billed
   const anticipatedUtil = totalDays > 0 ? (availableDays / totalDays) * 100 : 0;
 
   // Also compute how many hours already billed this year (YTD) for the projection
@@ -959,29 +956,38 @@ function renderKPIs(year) {
   for (let m = 0; m <= currentMonth; m++) {
     if (monthBeforeStart(year, m)) continue;
     const wd = workDaysInMonth(year, m, sd);
-    const ptoLogged = getPTODays(year, m);       // actual days taken (for KPI display)
-    const ptoBudgeted = getPTOForMonth(year, m); // annual budget prorated (for denominator)
-    const holidays = getHolidaysForMonth(year, m);
-    const nonBillable = ptoBudgeted + holidays;
+    const ptoLogged = getPTODays(year, m); // actual days taken (for KPI3 display)
     totalPTO += ptoLogged;
-    const fullAvail = Math.max(0, wd - nonBillable) * 8;
-    totalAvailHours += fullAvail;
+    totalAvailHours += wd * 8;
     totalBillable += getBillableHours(year, m);
 
-    // For pace: past months use full days; current month prorates to today
+    // Pace: past months = full workdays; current month = days elapsed MTD
     if (year === now.getFullYear() && m === now.getMonth()) {
       const wdToday = workDaysUpTo(year, m, today, sd);
-      const paceAvail = Math.max(0, wdToday - (wdToday / wd) * nonBillable) * 8;
-      paceAvailHours += paceAvail;
+      paceAvailHours += wdToday * 8;
     } else {
-      paceAvailHours += fullAvail;
+      paceAvailHours += wd * 8;
     }
   }
 
-  // Use paceAvailHours (MTD-aware) for both util and delta so they agree
+  // Utilization = billable / raw workdays (PTO+holidays lower util by leaving hours unbilled)
   const util = paceAvailHours > 0 ? (totalBillable / paceAvailHours * 100) : 0;
-  const paceTargetHours = paceAvailHours * (goal / 100);
-  const delta = totalBillable - paceTargetHours;
+
+  // Target = what you need to bill out of raw available hours to hit goal%
+  // PTO + holiday days are days you won't bill, so factor them into what's realistically needed
+  const annualNonBillable = (state.ptoBudget || 0) + (state.holidayBudget || 0);
+  let yearTotalWD = 0;
+  for (let m = 0; m < 12; m++) {
+    const lastDay = new Date(year, m + 1, 0);
+    if (sd && lastDay < sd) continue;
+    yearTotalWD += workDaysInMonth(year, m, sd);
+  }
+  // Prorate non-billable days to the elapsed portion of the year
+  const elapsedWD = paceAvailHours / 8;
+  const elapsedNonBillable = yearTotalWD > 0 ? annualNonBillable * (elapsedWD / yearTotalWD) : 0;
+  const elapsedBillableTarget = Math.max(0, elapsedWD - elapsedNonBillable) * 8 * (goal / 100);
+  const delta = totalBillable - elapsedBillableTarget;
+  const paceTargetHours = elapsedBillableTarget;
 
   // KPI 1: YTD util
   document.getElementById('kpiUtil').textContent = currentMonth >= 0 ? `${util.toFixed(1)}%` : '—';
