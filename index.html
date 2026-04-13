@@ -975,19 +975,10 @@ function renderKPIs(year) {
 
   // Target = what you need to bill out of raw available hours to hit goal%
   // PTO + holiday days are days you won't bill, so factor them into what's realistically needed
-  const annualNonBillable = (state.ptoBudget || 0) + (state.holidayBudget || 0);
-  let yearTotalWD = 0;
-  for (let m = 0; m < 12; m++) {
-    const lastDay = new Date(year, m + 1, 0);
-    if (sd && lastDay < sd) continue;
-    yearTotalWD += workDaysInMonth(year, m, sd);
-  }
-  // Prorate non-billable days to the elapsed portion of the year
-  const elapsedWD = paceAvailHours / 8;
-  const elapsedNonBillable = yearTotalWD > 0 ? annualNonBillable * (elapsedWD / yearTotalWD) : 0;
-  const elapsedBillableTarget = Math.max(0, elapsedWD - elapsedNonBillable) * 8 * (goal / 100);
-  const delta = totalBillable - elapsedBillableTarget;
-  const paceTargetHours = elapsedBillableTarget;
+  // Target = elapsed workday hours * goal%. PTO/holidays don't change the target —
+  // they just make it harder to hit by leaving fewer days to bill on.
+  const paceTargetHours = paceAvailHours * (goal / 100);
+  const delta = totalBillable - paceTargetHours;
 
   // KPI 1: YTD util
   document.getElementById('kpiUtil').textContent = currentMonth >= 0 ? `${util.toFixed(1)}%` : '—';
