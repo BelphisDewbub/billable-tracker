@@ -850,6 +850,21 @@ function renderAnnualSummary() {
   const requiredDays = availableDays * goal;
   const offDays = nonBillableDays;
 
+  // Anticipated util = all available days billed against total workdays (inc. PTO/holidays)
+  // i.e. if you bill every non-PTO, non-holiday weekday, what % of total workdays is that?
+  const anticipatedUtil = totalDays > 0 ? (availableDays / totalDays) * 100 : 0;
+
+  // Also compute how many hours already billed this year (YTD) for the projection
+  const now = new Date();
+  let ytdBilled = 0;
+  for (let m = 0; m < 12; m++) {
+    const lastDay = new Date(year, m + 1, 0);
+    if (sd && lastDay < sd) continue;
+    if (year < now.getFullYear() || (year === now.getFullYear() && m <= now.getMonth())) {
+      ytdBilled += getBillableHours(year, m);
+    }
+  }
+
   const el = document.getElementById('annualSummary');
   if (!el) return;
   el.innerHTML = `
@@ -865,9 +880,13 @@ function renderAnnualSummary() {
       <span>Available billable days</span>
       <strong>${availableDays.toFixed(1)}d / ${availableHours.toFixed(0)}h</strong>
     </div>
-    <div class="annual-summary-row highlight" style="border-top:1px solid #c5d8fb;padding-top:6px;margin-top:2px">
+    <div class="annual-summary-row" style="border-top:1px solid #c5d8fb;padding-top:6px;margin-top:2px">
       <span>Required to hit ${state.goal}%</span>
       <strong>${requiredDays.toFixed(1)}d / ${requiredHours.toFixed(0)}h</strong>
+    </div>
+    <div class="annual-summary-row highlight">
+      <span>Max util (all available days billed)</span>
+      <strong style="color:var(--md-primary)">${anticipatedUtil.toFixed(1)}%</strong>
     </div>
   `;
 }
