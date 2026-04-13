@@ -518,10 +518,10 @@ body {
       <div class="kpi-value" id="kpiBillable">0h</div>
       <div class="kpi-sub" id="kpiBillableSub">of <span id="kpiTarget">—</span>h target</div>
     </div>
-    <div class="kpi" style="--kpi-accent: #a78bfa)">
-      <div class="kpi-label">PTO Days Used</div>
-      <div class="kpi-value" id="kpiPTO" style="color:#a78bfa">0</div>
-      <div class="kpi-sub" id="kpiPTOSub">of 0 allocated</div>
+    <div class="kpi">
+      <div class="kpi-label">PTO + Holidays Used</div>
+      <div class="kpi-value" id="kpiPTO" style="color:#8a5cf6">0</div>
+      <div class="kpi-sub" id="kpiPTOSub">of 0 days budgeted</div>
     </div>
     <div class="kpi" style="--kpi-accent: var(--accent2)">
       <div class="kpi-label">Hours Behind / Ahead</div>
@@ -580,7 +580,14 @@ body {
             <label>PTO Days Allocated</label>
             <input type="number" id="ptoBudget" value="15" min="0" max="60" placeholder="15">
           </div>
-          <div class="tip">Work week = 40 hrs. Hours per day = 8. Adjustments are saved automatically.</div>
+          <div class="form-group">
+            <label>Company Holidays (annual)</label>
+            <div class="slider-wrap">
+              <input type="range" id="holidaySlider" min="0" max="20" value="10" step="1">
+              <span class="slider-val" id="holidayVal">10 days</span>
+            </div>
+          </div>
+          <div class="tip">Work week = 40 hrs. Hours per day = 8. PTO + Holidays reduce your available hours. Adjustments are saved automatically.</div>
         </div>
       </div>
 
@@ -656,7 +663,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  return { goal: 80, ptoBudget: 15, startDate: null, entries: {}, pto: {} };
+  return { goal: 80, ptoBudget: 15, holidayBudget: 10, startDate: null, entries: {}, pto: {} };
 }
 
 function saveState(s) {
@@ -700,6 +707,23 @@ function monthBeforeStart(year, monthIdx) {
 
 function getKey(year, monthIdx) { return `${year}_${monthIdx}`; }
 
+// Prorate annual holidays to a specific month based on its share of yearly workdays
+function getHolidaysForMonth(year, monthIdx, fromDate) {
+  const annual = state.holidayBudget || 0;
+  if (annual === 0) return 0;
+  // Total workdays in the year from startDate (or Jan 1)
+  const sd = getStartDate();
+  let yearTotal = 0;
+  for (let m = 0; m < 12; m++) {
+    const lastDay = new Date(year, m + 1, 0);
+    if (sd && lastDay < sd) continue;
+    yearTotal += workDaysInMonth(year, m, sd);
+  }
+  if (yearTotal === 0) return 0;
+  const monthWD = workDaysInMonth(year, monthIdx, fromDate !== undefined ? fromDate : sd);
+  return annual * (monthWD / yearTotal);
+}
+
 function getBillableHours(year, monthIdx) {
   const k = getKey(year, monthIdx);
   return (state.entries[k] || []).reduce((s, e) => s + e.hours, 0);
@@ -716,24 +740,26 @@ function getUtilization(year, monthIdx) {
   const now = new Date();
   const isCur = isMonthCurrent(year, monthIdx);
 
+  const totalWD = workDaysInMonth(year, monthIdx, sd);
   let workDays;
   if (isCur) {
-    // MTD: denominator = weekdays elapsed through today
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     workDays = workDaysUpTo(year, monthIdx, today, sd);
   } else {
-    workDays = workDaysInMonth(year, monthIdx, sd);
+    workDays = totalWD;
   }
 
   const pto = getPTODays(year, monthIdx);
-  // Prorate PTO for current month so partial weeks don't over-penalise
-  let effectivePTO = pto;
+  const holidays = getHolidaysForMonth(year, monthIdx);
+  const totalNonBillable = pto + holidays;
+
+  // Prorate PTO+holidays for current month
+  let effectiveNonBillable = totalNonBillable;
   if (isCur) {
-    const totalWD = workDaysInMonth(year, monthIdx, sd);
-    effectivePTO = totalWD > 0 ? workDays * (pto / totalWD) : 0;
+    effectiveNonBillable = totalWD > 0 ? workDays * (totalNonBillable / totalWD) : 0;
   }
 
-  const availHours = Math.max(0, workDays - effectivePTO) * 8;
+  const availHours = Math.max(0, workDays - effectiveNonBillable) * 8;
   if (availHours === 0) return null;
   return (getBillableHours(year, monthIdx) / availHours) * 100;
 }
@@ -819,16 +845,18 @@ function renderKPIs(year) {
     if (monthBeforeStart(year, m)) continue;
     const wd = workDaysInMonth(year, m, sd);
     const pto = getPTODays(year, m);
+    const holidays = getHolidaysForMonth(year, m);
+    const nonBillable = pto + holidays;
     totalPTO += pto;
-    const fullAvail = Math.max(0, wd - pto) * 8;
+    const fullAvail = Math.max(0, wd - nonBillable) * 8;
     totalAvailHours += fullAvail;
     totalBillable += getBillableHours(year, m);
 
     // For pace: past months use full days; current month prorates to today
     if (year === now.getFullYear() && m === now.getMonth()) {
       const wdToday = workDaysUpTo(year, m, today, sd);
-      const ptoFraction = wd > 0 ? (pto / wd) : 0; // spread PTO evenly across the month
-      const paceAvail = Math.max(0, wdToday - pto * ptoFraction) * 8;
+      const nonBillableFraction = wd > 0 ? (nonBillable / wd) : 0;
+      const paceAvail = Math.max(0, wdToday - nonBillable * nonBillableFraction) * 8;
       paceAvailHours += paceAvail;
     } else {
       paceAvailHours += fullAvail;
@@ -850,7 +878,7 @@ function renderKPIs(year) {
 
   // KPI 3: PTO
   document.getElementById('kpiPTO').textContent = totalPTO.toFixed(1);
-  document.getElementById('kpiPTOSub').textContent = `of ${state.ptoBudget} allocated`;
+  document.getElementById('kpiPTOSub').textContent = `of ${(state.ptoBudget + (state.holidayBudget||0))} days budgeted`;
 
   // KPI 4: delta
   const sign = delta >= 0 ? '+' : '';
@@ -953,6 +981,8 @@ function syncGoalUI() {
   document.getElementById('goalVal').textContent = state.goal + '%';
   document.getElementById('ptoBudget').value = state.ptoBudget;
   document.getElementById('startDate').value = state.startDate || '';
+  document.getElementById('holidaySlider').value = state.holidayBudget;
+  document.getElementById('holidayVal').textContent = state.holidayBudget + ' days';
 }
 
 // ── ACTIONS ──
@@ -1063,6 +1093,13 @@ document.getElementById('goalSlider').addEventListener('input', function() {
 
 document.getElementById('ptoBudget').addEventListener('change', function() {
   state.ptoBudget = parseInt(this.value) || 0;
+  saveState(state);
+  render();
+});
+
+document.getElementById('holidaySlider').addEventListener('input', function() {
+  state.holidayBudget = parseInt(this.value);
+  document.getElementById('holidayVal').textContent = this.value + ' days';
   saveState(state);
   render();
 });
